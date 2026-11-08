@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agent-minimiser"
+version = "0.1.0"
+description = "Agent-native software construction and execution platform (Phase 2 minimal vertical slice)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Agent Minimiser" }]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+am = "agent_minimiser.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agent_minimiser*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

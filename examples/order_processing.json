@@ -1,0 +1,35 @@
+{
+  "version": "0.1",
+  "name": "order_processing",
+  "description": "Accept an order, validate the customer, check stock, price with discount + shipping, and confirm.",
+  "inputs": [
+    {"name": "order_id", "type": "str", "required": true},
+    {"name": "customer_name", "type": "str", "required": true},
+    {"name": "customer_email", "type": "str", "required": true},
+    {"name": "items", "type": "list", "required": true},
+    {"name": "inventory", "type": "map", "required": false, "default": {"SKU-A": 50, "SKU-B": 20, "SKU-C": 5}}
+  ],
+  "nodes": [
+    {"id": "n_name", "op": "require_nonempty", "args": {"v": {"input": "customer_name"}}, "params": {"name": "customer_name"}, "desc": "Customer name is present"},
+    {"id": "n_email", "op": "validate_email", "args": {"email": {"input": "customer_email"}}, "desc": "Customer email is valid"},
+    {"id": "n_items", "op": "require_nonempty", "args": {"v": {"input": "items"}}, "params": {"name": "items"}, "desc": "Order has at least one item"},
+    {"id": "n_stock", "op": "check_stock", "args": {"items": {"input": "items"}, "inventory": {"input": "inventory"}}, "desc": "Every item is in stock"},
+    {"id": "n_subtotal", "op": "sum_line_total", "args": {"items": {"input": "items"}}, "desc": "Subtotal = sum of price x qty"},
+    {"id": "n_has_volume", "op": "ge", "args": {"a": {"ref": "n_subtotal"}, "b": {"const": 100}}, "desc": "Subtotal qualifies for 10% discount"},
+    {"id": "n_rate", "op": "select", "args": {"cond": {"ref": "n_has_volume"}, "then": {"const": 0.1}, "otherwise": {"const": 0.0}}, "desc": "Discount rate 10% over $100, else 0%"},
+    {"id": "n_factor", "op": "sub", "args": {"a": {"const": 1.0}, "b": {"ref": "n_rate"}}, "desc": "Payable factor = 1 - rate"},
+    {"id": "n_after_discount", "op": "mul", "args": {"a": {"ref": "n_subtotal"}, "b": {"ref": "n_factor"}}, "desc": "Total after discount"},
+    {"id": "n_free_ship", "op": "ge", "args": {"a": {"ref": "n_after_discount"}, "b": {"const": 50}}, "desc": "Free shipping over $50 after discount"},
+    {"id": "n_shipping", "op": "select", "args": {"cond": {"ref": "n_free_ship"}, "then": {"const": 0.0}, "otherwise": {"const": 9.99}}, "desc": "Shipping $0 over $50 else $9.99"},
+    {"id": "n_total", "op": "add", "args": {"a": {"ref": "n_after_discount"}, "b": {"ref": "n_shipping"}}, "desc": "Grand total = after-discount + shipping"},
+    {"id": "n_total_r", "op": "round", "args": {"v": {"ref": "n_total"}}, "params": {"digits": 2}, "desc": "Round total to cents"},
+    {"id": "n_state", "op": "state_set", "args": {"key": {"const": "last_order"}, "value": {"input": "order_id"}}, "desc": "Record the order in state"},
+    {"id": "n_event", "op": "emit", "args": {"payload": {"ref": "n_total_r"}}, "params": {"event": "order_confirmed"}, "desc": "Emit order_confirmed event"},
+    {"id": "n_msg", "op": "template", "args": {"text": {"const": "Thanks {customer_name}! Order {order_id} confirmed. Total: ${total_r}."}, "customer_name": {"input": "customer_name"}, "order_id": {"input": "order_id"}, "total_r": {"ref": "n_total_r"}}, "desc": "Order confirmation message"}
+  ],
+  "outputs": {
+    "confirmation": {"ref": "n_msg"},
+    "total": {"ref": "n_total_r"},
+    "status": {"const": "confirmed"}
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "order_id": "ORD-1001",
+  "customer_name": "Anirban",
+  "customer_email": "anirban@example.com",
+  "items": [{"sku": "SKU-A", "price": 60.0, "qty": 1}, {"sku": "SKU-B", "price": 25.0, "qty": 2}]
+}
