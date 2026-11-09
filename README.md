@@ -6,7 +6,7 @@ Agents construct applications directly in a compact, typed, verifiable
 machine representation (IR) and a model-independent engine executes
 them — no conventional source code as the primary artifact. Python
 implements the *engine* (a prototype choice); the *applications* are
-pure IR.
+pure IR. 
 
 ## Quick start
 
